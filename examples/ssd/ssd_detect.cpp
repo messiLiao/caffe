@@ -285,28 +285,94 @@ int main(int argc, char** argv) {
   // Process image one by one.
   std::ifstream infile(argv[3]);
   std::string file;
+  uint32_t file_cnt = 0;
+  bool use_cross_detect = 1;
   while (infile >> file) {
     if (file_type == "image") {
-      cv::Mat img = cv::imread(file, -1);
-      CHECK(!img.empty()) << "Unable to decode image " << file;
-      std::vector<vector<float> > detections = detector.Detect(img);
+      file_cnt ++;
+      if(file_cnt % 1000 == 0)
+      {
 
-      /* Print the detection results. */
-      for (int i = 0; i < detections.size(); ++i) {
-        const vector<float>& d = detections[i];
-        // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
-        CHECK_EQ(d.size(), 7);
-        const float score = d[2];
-        if (score >= confidence_threshold) {
-          out << file << " ";
-          out << static_cast<int>(d[1]) << " ";
-          out << score << " ";
-          out << static_cast<int>(d[3] * img.cols) << " ";
-          out << static_cast<int>(d[4] * img.rows) << " ";
-          out << static_cast<int>(d[5] * img.cols) << " ";
-          out << static_cast<int>(d[6] * img.rows) << std::endl;
+      }
+      cv::Mat img = cv::imread(file, 1);
+      // CHECK(!img.empty()) << "Unable to decode image " << file;
+      if(img.empty())
+      {
+	      std::cout << "Unable to decode image " << file << std::endl;
+	      continue;
+      }
+      if(use_cross_detect)
+      {
+        int w, h;
+        w = img.cols;
+        h = img.rows;
+	int x, y, sw, sh;
+	int board = 30;
+	sw = w / 2 + board;
+	sh = h / 2 + board;
+	int origin[6][4] = {{0, 0, sw, sh}, {0, h/2 - board, sw, sh}, {w/2 - board, 0, sw, sh}, {w/2 - board, h/2 - board, sw, sh}, {0, 0, w, h}, {w / 4 - board / 2, h / 4 - board / 2, sw, sh}};
+        std::vector<vector<float> > detections; 
+	cv::Mat sub_image;
+	int detection_count = 0;
+	for(int j = 0; j < 6; j++)
+	{
+	  x = origin[j][0];
+	  y = origin[j][1];
+	  sw = origin[j][2];
+	  sh = origin[j][3];
+          // std::cout << j << "," << w << "," << h << "," << x << "," << y << "," << sw << "," << sh << std::endl;
+	  if((x < 0) || (y < 0) || (sw < 0) || (sh < 0) || (y + sh > h) || (x + sw > w))
+	  {
+		  // std::cout << x << "," << y << "," << sw << "," << sh << std::endl;
+		  continue;
+	  }
+	  sub_image = img(cv::Range(y, y + sh), cv::Range(x, x + sw)).clone();
+	  detections = detector.Detect(sub_image);
+          /* Print the detection results. */
+          for (int i = 0; i < detections.size(); ++i) {
+            const vector<float>& d = detections[i];
+            // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+            CHECK_EQ(d.size(), 7);
+            const float score = d[2];
+            if (score >= confidence_threshold) {
+	      detection_count += detections.size();
+              out << file << " ";
+              out << static_cast<int>(d[1]) << " ";
+              out << score << " ";
+              out << static_cast<int>(d[3] * sw) + x << " ";
+              out << static_cast<int>(d[4] * sh) + y << " ";
+              out << static_cast<int>(d[5] * sw) + x << " ";
+              out << static_cast<int>(d[6] * sh) + y << std::endl;
+            //cv::rectangle(img, cv::Point(int(d[3] * img.cols), int(d[4] * img.rows)), cv::Point(int(d[5] * img.cols), int(d[6] * img.rows)), cv::Scalar(0, 255, 0), 2, 8);
+	    }
+          }
+	}
+      }
+      else
+      {
+        std::vector<vector<float> > detections = detector.Detect(img);
+      
+
+        /* Print the detection results. */
+        for (int i = 0; i < detections.size(); ++i) {
+          const vector<float>& d = detections[i];
+          // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+          CHECK_EQ(d.size(), 7);
+          const float score = d[2];
+          if (score >= confidence_threshold) {
+            out << file << " ";
+            out << static_cast<int>(d[1]) << " ";
+            out << score << " ";
+            out << static_cast<int>(d[3] * img.cols) << " ";
+            out << static_cast<int>(d[4] * img.rows) << " ";
+            out << static_cast<int>(d[5] * img.cols) << " ";
+            out << static_cast<int>(d[6] * img.rows) << std::endl;
+            //cv::rectangle(img, cv::Point(int(d[3] * img.cols), int(d[4] * img.rows)), cv::Point(int(d[5] * img.cols), int(d[6] * img.rows)), cv::Scalar(0, 255, 0), 2, 8);
+	  }
         }
       }
+      //cv::imshow("Image", img);
+      //cv::waitKey(0);
     } else if (file_type == "video") {
       cv::VideoCapture cap(file);
       if (!cap.isOpened()) {
