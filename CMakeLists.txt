@@ -55,6 +55,7 @@ if(USE_libstdcpp)
 endif()
 
 add_definitions(-DGTEST_USE_OWN_TR1_TUPLE)
+add_definitions("-std=gnu++11")
 
 # ---[ Warnings
 caffe_warnings_disable(CMAKE_CXX_FLAGS -Wno-sign-compare -Wno-uninitialized)

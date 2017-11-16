@@ -25,6 +25,11 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/msg.h>
 
 #ifdef USE_OPENCV
 using namespace caffe;  // NOLINT(build/namespaces)
@@ -241,6 +246,13 @@ DEFINE_string(out_file, "",
 DEFINE_double(confidence_threshold, 0.01,
     "Only store detections with score higher than the threshold.");
 
+
+typedef struct _Pmsg
+{
+	long int msg_type;
+	char fn[200];
+}Pmsg;
+
 int main(int argc, char** argv) {
   ::google::InitGoogleLogging(argv[0]);
   // Print output to stderr (while still logging)
@@ -268,6 +280,140 @@ int main(int argc, char** argv) {
   const string& out_file = FLAGS_out_file;
   const float confidence_threshold = FLAGS_confidence_threshold;
 
+  pid_t root_pid = getpid();
+  int is_root_parent = getpid() == root_pid;
+  const key_t msg_key = 7786;
+  const int msg_type = 1;
+  const int msg_id = msgget(msg_key, 0666 | IPC_CREAT);
+  std::cout << "msg_id=" << msg_id << std::endl;
+  Pmsg msg;
+  msg.msg_type = msg_type;
+  std::cout << "start fork" << std::endl;
+  pid_t pid = fork();
+  int child_count = 1;
+  vector<pid_t>child_pid_list;
+  is_root_parent = getpid() == root_pid;
+  for(int i = 0; i < child_count; i++)
+  {
+	  if(is_root_parent)
+	  {
+		  pid = fork();
+		  if(pid)
+		  {
+			  child_pid_list.push_back(pid);
+		  }
+		  is_root_parent = getpid() == root_pid;
+		  std::cout << "fork child pid:" << pid << std::endl; 
+	  }
+  }
+  is_root_parent = getpid() == root_pid;
+  std::ifstream infile(argv[3]);
+  std::cout << "input file name is:" << argv[3] << std::endl;
+  std::string file;
+  if(is_root_parent)
+  {
+	  int image_count = 0;
+	  int find_start = 1;
+	  string start_fn = "500_1X8Q_PUyG7QWv_b3WwrOeA.jpg";
+	  while(infile >> file)
+	  {
+		  if(!find_start)
+		  {
+			  if(file.find(start_fn) != string::npos)
+			  {
+				  find_start = 1;
+			  }
+			  else
+			  {
+				  std::cout << "skip file:" << file << std::endl;
+				  continue;
+			  }
+		  }
+		  image_count += 1;
+		  if(image_count % 100 == 0)
+		  {
+			  std::cout << "Image Count = " << image_count << std::endl;
+		  }
+		  if(file_type == "image")
+		  {
+			  file.copy(msg.fn, file.length());
+			  msg.fn[file.length()] = '\x00';
+			  msg.msg_type = msg_type;
+			  msgsnd(msg_id, (void*)&msg, 200, 0);
+		  }
+		  else if(file_type == "video")
+		  {
+		  }
+		  else
+		  {
+		  }
+	  }
+	  wait(NULL);
+  }
+  else
+  {
+	  Detector ssd_det(model_file, weights_file, mean_file, mean_value);
+	  while(1)
+	  {
+	      msgrcv(msg_id, (void*)&msg, 200, msg_type, 0);
+	      cv::Mat image = cv::imread(msg.fn, 1);
+	      if(image.empty())
+	      {
+		      continue;
+	      }
+	      int w, h;
+	      w = image.cols;
+	      h = image.rows;
+	      int x, y, sw, sh;
+	      int board = 30;
+	      sw = w / 2 + board;
+	      sh = h / 2 + board;
+	      int origin[6][4] = {{0, 0, sw, sh}, {0, h/2 - board, sw, sh}, {w/2 - board, 0, sw, sh}, {w/2 - board, h/2 - board, sw, sh}, {0, 0, w, h}, {w / 4 - board / 2, h / 4 - board / 2, sw, sh}};
+	      std::vector<vector<float> > detections; 
+	      cv::Mat sub_image;
+	      int detection_count = 0;
+	      for(int j = 0; j < 6; j++)
+	      {
+		      x = origin[j][0];
+		      y = origin[j][1];
+		      sw = origin[j][2];
+		      sh = origin[j][3];
+		      // std::cout << j << "," << w << "," << h << "," << x << "," << y << "," << sw << "," << sh << std::endl;
+		      if((x < 0) || (y < 0) || (sw < 0) || (sh < 0) || (y + sh > h) || (x + sw > w))
+		      {
+		      // // std::cout << x << "," << y << "," << sw << "," << sh << std::endl;
+		       continue;
+		      }
+		      sub_image = image(cv::Range(y, y + sh), cv::Range(x, x + sw)).clone();
+		      if(sub_image.empty())
+		      {
+			      continue;
+		      }
+		      detections = ssd_det.Detect(sub_image);
+		       /* Print the detection results. */
+		      for (int i = 0; i < detections.size(); ++i) {
+		        const vector<float>& d = detections[i];
+		        // Detection format: [image_id, label, score, xmin, ymin, xmax, ymax].
+		        CHECK_EQ(d.size(), 7);
+		        const float score = d[2];
+		         if (score >= confidence_threshold) {
+		           detection_count += detections.size();
+			   std::cout << msg.fn << " ";
+			   std::cout << static_cast<int>(d[1]) << " ";
+			   std::cout << score << " ";
+			   std::cout << static_cast<int>(d[3] * sw) + x << " ";
+			   std::cout << static_cast<int>(d[4] * sh) + y << " ";
+			   std::cout << static_cast<int>(d[5] * sw) + x << " ";
+			   std::cout << static_cast<int>(d[6] * sh) + y << std::endl;
+		           // cv::rectangle(img, cv::Point(int(d[3] * img.cols), int(d[4] * img.rows)), cv::Point(int(d[5] * img.cols), int(d[6] * img.rows)), cv::Scalar(0, 255, 0), 2, 8);
+			 }
+		      }
+	  
+	      }
+	  }
+  }
+  std::cout << "...............................exit...................." << std::endl;
+  return 0;
   // Initialize the network.
   Detector detector(model_file, weights_file, mean_file, mean_value);
 
@@ -283,8 +429,6 @@ int main(int argc, char** argv) {
   std::ostream out(buf);
 
   // Process image one by one.
-  std::ifstream infile(argv[3]);
-  std::string file;
   uint32_t file_cnt = 0;
   bool use_cross_detect = 1;
   while (infile >> file) {
@@ -371,6 +515,7 @@ int main(int argc, char** argv) {
 	  }
         }
       }
+   
       //cv::imshow("Image", img);
       //cv::waitKey(0);
     } else if (file_type == "video") {
