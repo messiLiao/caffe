@@ -253,6 +253,68 @@ typedef struct _Pmsg
 	char fn[200];
 }Pmsg;
 
+int generate_zoning_boxes(int w, int h, int cols, int rows, float overlap, int bboxes[][4], int rand_int)
+{
+	int x_, y_, sw, sh, _x, _y, index;
+	cols = cols > 0 ? cols : 1;
+	rows = rows > 0 ? rows : 1;
+	if(overlap < 0 || overlap > 1.0)
+	{
+		return -1;
+	}
+	overlap /= 2;
+	index = 0;
+	for(int i = 0; i < cols; i++)
+	{
+		for(int j = 0; j < rows; j++)
+		{
+			x_ = w * (1.0 * i / cols - overlap);
+			y_ = h * (1.0 * j / rows - overlap);
+			_x = w * (1.0 * (i + 1) / cols + overlap);
+			_y = h * (1.0 * (j + 1) / rows + overlap);
+
+			x_ = x_ > 0 ? x_ : 0;
+			y_ = y_ > 0 ? y_ : 0;
+			_x = _x < w ? _x : w - 1;
+			_y = _y < h ? _y : h - 1;
+			sw = _x - x_;
+			sh = _y - y_;
+			bboxes[index][0] = x_;
+			bboxes[index][1] = y_;
+			bboxes[index][2] = sw;
+			bboxes[index][3] = sh;
+			index += 1;
+		}
+	}
+	for(int i = 0; i < cols - 1; i++)
+	{
+		for(int j = 0; j < rows - 1; j++)
+		{
+			x_ = w * (1.0 * i / cols - overlap);
+			y_ = h * (1.0 * j / rows - overlap);
+			_x = w * (1.0 * (i + 1) / cols + overlap);
+			_y = h * (1.0 * (j + 1) / rows + overlap);
+
+			x_ = x_ > 0 ? x_ : 0;
+			y_ = y_ > 0 ? y_ : 0;
+			_x = _x < w ? _x : w - 1;
+			_y = _y < h ? _y : h - 1;
+			sw = _x - x_;
+			sh = _y - y_;
+			bboxes[index][0] = x_;
+			bboxes[index][1] = y_;
+			bboxes[index][2] = sw;
+			bboxes[index][3] = sh;
+			index += 1;
+		}
+	}
+	bboxes[index][0] = 0;
+	bboxes[index][1] = 0;
+	bboxes[index][2] = w;
+	bboxes[index][3] = h;
+	return index;
+}
+
 int main(int argc, char** argv) {
   ::google::InitGoogleLogging(argv[0]);
   // Print output to stderr (while still logging)
@@ -368,17 +430,23 @@ int main(int argc, char** argv) {
 	      int board = 30;
 	      sw = w / 2 + board;
 	      sh = h / 2 + board;
-	      int origin[6][4] = {{0, 0, sw, sh}, {0, h/2 - board, sw, sh}, {w/2 - board, 0, sw, sh}, {w/2 - board, h/2 - board, sw, sh}, {0, 0, w, h}, {w / 4 - board / 2, h / 4 - board / 2, sw, sh}};
+	      const int split_rows = 3;
+	      const int split_cols = 3;
+	      const int sub_image_count = split_rows * split_cols + (split_rows - 1) * (split_cols - 1) + 1;
+	      // int origin[6][4] = {{0, 0, sw, sh}, {0, h/2 - board, sw, sh}, {w/2 - board, 0, sw, sh}, {w/2 - board, h/2 - board, sw, sh}, {0, 0, w, h}, {w / 4 - board / 2, h / 4 - board / 2, sw, sh}};
+	      int origin[sub_image_count][4];
 	      std::vector<vector<float> > detections; 
 	      cv::Mat sub_image;
 	      int detection_count = 0;
-	      for(int j = 0; j < 6; j++)
+	      float overlap = 0.2;
+	      int rand_int = rand() + getpid();
+	      generate_zoning_boxes(w, h, split_cols, split_rows, overlap, origin, rand_int);
+	      for(int j = 0; j < sub_image_count; j++)
 	      {
 		      x = origin[j][0];
 		      y = origin[j][1];
 		      sw = origin[j][2];
 		      sh = origin[j][3];
-		      // std::cout << j << "," << w << "," << h << "," << x << "," << y << "," << sw << "," << sh << std::endl;
 		      if((x < 0) || (y < 0) || (sw < 0) || (sh < 0) || (y + sh > h) || (x + sw > w))
 		      {
 		      // // std::cout << x << "," << y << "," << sw << "," << sh << std::endl;
