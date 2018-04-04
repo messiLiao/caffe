@@ -1,0 +1,10 @@
+./images/test_004.jpg ./labels/test_004.txt
+./images/test_007.png ./labels/test_007.txt
+./images/test_001.jpg ./labels/test_001.txt
+./images/test_005.jpg ./labels/test_005.txt
+./images/test_003.png ./labels/test_003.txt
+./images/test_002.jpg ./labels/test_002.txt
+./images/test_008.jpg ./labels/test_008.txt
+./images/test_006.jpg ./labels/test_006.txt
+./images/test_010.png ./labels/test_010.txt
+./images/test_009.png ./labels/test_009.txt

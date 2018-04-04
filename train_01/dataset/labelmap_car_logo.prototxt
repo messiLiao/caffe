@@ -1,0 +1,155 @@
+item {
+  name: "none_of_the_above"
+  label: 0
+  display_name: "background"
+}
+item {
+  name: "beiqi"
+  label: 1
+  display_name: "beiqi"
+}
+item {
+  name: "fute"
+  label: 2
+  display_name: "fute"
+}
+item {
+  name: "sikeda"
+  label: 3
+  display_name: "sikeda"
+}
+item {
+  name: "qichen"
+  label: 4
+  display_name: "qichen"
+}
+item {
+  name: "bentian"
+  label: 5
+  display_name: "bentian"
+}
+item {
+  name: "richan"
+  label: 6
+  display_name: "richan"
+}
+item {
+  name: "kaidilake"
+  label: 7
+  display_name: "kaidilake"
+}
+item {
+  name: "lingmu"
+  label: 8
+  display_name: "lingmu"
+}
+item {
+  name: "jili"
+  label: 9
+  display_name: "jili"
+}
+item {
+  name: "baoshijie"
+  label: 10
+  display_name: "baoshijie"
+}
+item {
+  name: "jeep"
+  label: 11
+  display_name: "jeep"
+}
+item {
+  name: "baojun"
+  label: 12
+  display_name: "baojun"
+}
+item {
+  name: "rongwei"
+  label: 13
+  display_name: "rongwei"
+}
+item {
+  name: "linken"
+  label: 14
+  display_name: "linken"
+}
+item {
+  name: "fengtian"
+  label: 15
+  display_name: "fengtian"
+}
+item {
+  name: "bieke"
+  label: 16
+  display_name: "bieke"
+}
+item {
+  name: "qirui"
+  label: 17
+  display_name: "qirui"
+}
+item {
+  name: "qiya"
+  label: 18
+  display_name: "qiya"
+}
+item {
+  name: "hafu"
+  label: 19
+  display_name: "hafu"
+}
+item {
+  name: "aodi"
+  label: 20
+  display_name: "aodi"
+}
+item {
+  name: "luhu"
+  label: 21
+  display_name: "luhu"
+}
+item {
+  name: "dazong"
+  label: 22
+  display_name: "dazong"
+}
+item {
+  name: "guangqichuanqi"
+  label: 23
+  display_name: "guangqichuanqi"
+}
+item {
+  name: "changan"
+  label: 24
+  display_name: "changan"
+}
+item {
+  name: "mingjue"
+  label: 25
+  display_name: "mingjue"
+}
+item {
+  name: "leinuo"
+  label: 26
+  display_name: "leinuo"
+}
+item {
+  name: "leikeshasi"
+  label: 27
+  display_name: "leikeshasi"
+}
+item {
+  name: "baoma"
+  label: 28
+  display_name: "baoma"
+}
+item {
+  name: "mazida"
+  label: 29
+  display_name: "mazida"
+}
+item {
+  name: "benchi"
+  label: 30
+  display_name: "benchi"
+}
